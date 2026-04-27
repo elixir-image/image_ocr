@@ -22,8 +22,20 @@ defmodule ImageOcr.PoolTest do
   end
 
   test "handles concurrent checkouts with different inputs", %{pool: pool} do
+    # Use multi-word phrases — single short tokens (e.g. "Qux") are sometimes
+    # discarded by Tesseract's PSM=auto layout analysis on certain 5.x point
+    # releases, which would make the test flaky in CI.
     inputs =
-      ["Foo", "Bar", "Baz", "Qux", "Foo Bar", "Bar Baz", "Quick brown fox", "Lazy dog"]
+      [
+        "Alpha bravo",
+        "Charlie delta",
+        "Echo foxtrot",
+        "Golf hotel",
+        "Quick brown fox",
+        "Lazy dog jumps",
+        "The morning fog",
+        "Through the woods"
+      ]
       |> Enum.map(&{&1, text_image(&1)})
 
     results =
