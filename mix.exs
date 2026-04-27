@@ -51,13 +51,14 @@ defmodule ImageOcr.MixProject do
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files: ~w(lib c_src priv/tessdata/eng.traineddata priv/tessdata/VERSION
-           Makefile mix.exs README.md CHANGELOG.md LICENSE .formatter.exs)
+           Makefile mix.exs README.md CHANGELOG.md LICENSE logo.jpg .formatter.exs)
     ]
   end
 
   defp docs do
     [
       main: "readme",
+      logo: "logo.jpg",
       extras: ["README.md", "CHANGELOG.md"],
       source_ref: "v#{@version}"
     ]
