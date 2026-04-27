@@ -18,6 +18,7 @@ defmodule ImageOcr.MixProject do
       description: description(),
       package: package(),
       docs: docs(),
+      dialyzer: dialyzer(),
       source_url: @source_url
     ]
   end
@@ -53,6 +54,16 @@ defmodule ImageOcr.MixProject do
       links: %{"GitHub" => @source_url},
       files: ~w(lib c_src priv/tessdata/eng.traineddata priv/tessdata/VERSION
            Makefile mix.exs README.md CHANGELOG.md LICENSE logo.jpg .formatter.exs)
+    ]
+  end
+
+  defp dialyzer do
+    [
+      # The mix tasks under lib/mix/tasks/ legitimately call Mix.Task.run/1,
+      # Mix.shell/0, and Mix.raise/1 — pull :mix into the PLT so dialyzer
+      # can see those callbacks. :inets / :public_key are used by the
+      # tessdata HTTP fetcher.
+      plt_add_apps: [:mix, :inets, :ssl, :public_key, :ex_unit]
     ]
   end
 

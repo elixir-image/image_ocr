@@ -54,10 +54,9 @@ defmodule ImageOcr.Input do
   end
 
   def to_vimage(charlist) when is_list(charlist) do
-    case List.to_string(charlist) do
-      path when is_binary(path) -> to_vimage(path)
-      _ -> {:error, {:unsupported_input, :invalid_charlist}}
-    end
+    to_vimage(List.to_string(charlist))
+  rescue
+    ArgumentError -> {:error, {:unsupported_input, :invalid_charlist}}
   end
 
   def to_vimage(other), do: {:error, {:unsupported_input, other}}

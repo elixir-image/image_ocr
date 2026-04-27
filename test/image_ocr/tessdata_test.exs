@@ -1,5 +1,8 @@
 defmodule ImageOcr.TessdataTest do
-  use ExUnit.Case, async: true
+  # async: false because these tests mutate Application env / OS env
+  # (`:image_ocr, :tessdata_path` and `TESSDATA_PREFIX`), which is global
+  # state that would otherwise race ImageOcr.new/1 calls in other modules.
+  use ExUnit.Case, async: false
 
   alias ImageOcr.Tessdata
 

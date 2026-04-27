@@ -59,8 +59,12 @@ defmodule ImageOcr.ConcurrencyTest do
   end
 
   test "instance is garbage-collected without crashing the VM" do
+    # Pass :datapath explicitly so this test is not sensitive to other test
+    # modules transiently mutating the :tessdata_path application env.
+    datapath = ImageOcr.Tessdata.vendored_path()
+
     Enum.each(1..50, fn _ ->
-      {:ok, _ocr} = ImageOcr.new()
+      {:ok, _ocr} = ImageOcr.new(datapath: datapath)
     end)
 
     :erlang.garbage_collect()
