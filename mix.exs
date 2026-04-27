@@ -8,7 +8,7 @@ defmodule ImageOcr.MixProject do
     [
       app: :image_ocr,
       version: @version,
-      elixir: "~> 1.20-rc",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       compilers: [:elixir_make] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -36,7 +36,8 @@ defmodule ImageOcr.MixProject do
       {:vix, "~> 0.30"},
       {:nimble_pool, "~> 1.1"},
       {:elixir_make, "~> 0.8", runtime: false},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 
