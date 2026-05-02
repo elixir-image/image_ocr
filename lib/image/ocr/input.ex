@@ -1,4 +1,4 @@
-defmodule ImageOcr.Input do
+defmodule Image.OCR.Input do
   @moduledoc """
   Normalises supported OCR inputs into a `Vix.Vips.Image.t()` and an associated
   raw pixel buffer suitable for handing to the Tesseract NIF.

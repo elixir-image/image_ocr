@@ -1,4 +1,4 @@
-# ImageOcr
+# Image.OCR (image_ocr)
 
 Idiomatic Elixir interface to the [Tesseract](https://github.com/tesseract-ocr/tesseract)
 OCR engine. Implemented as a NIF over the Tesseract 5.x C++ API; accepts
@@ -10,18 +10,61 @@ recognised text.
 * Tesseract **≥ 5.0** and Leptonica installed at build time, with both
   reachable via `pkg-config`.
 
+  ### macOS
+
   ```bash
-  # macOS
-  brew install tesseract leptonica
-
-  # Debian / Ubuntu
-  apt-get install libtesseract-dev libleptonica-dev pkg-config
-
-  # Alpine
-  apk add tesseract-ocr-dev leptonica-dev pkg-config
+  brew install tesseract leptonica pkg-config
   ```
 
-* Elixir **≥ 1.20-rc** and OTP 27 or 28.
+  Xcode Command Line Tools (for `clang++`) must be installed:
+  `xcode-select --install`.
+
+  ### Debian / Ubuntu
+
+  ```bash
+  sudo apt-get install -y \
+    build-essential pkg-config \
+    libtesseract-dev libleptonica-dev tesseract-ocr
+  ```
+
+  Ubuntu **24.04+** is required for Tesseract ≥ 5.0; 22.04 ships 4.x and
+  will not build. On 22.04 either upgrade or install Tesseract 5 from a
+  PPA / source.
+
+  ### Fedora / RHEL / CentOS Stream
+
+  ```bash
+  sudo dnf install -y \
+    gcc-c++ pkgconf-pkg-config \
+    tesseract-devel leptonica-devel
+  ```
+
+  ### Arch / Manjaro
+
+  ```bash
+  sudo pacman -S base-devel pkgconf tesseract leptonica
+  ```
+
+  ### Alpine
+
+  ```bash
+  apk add build-base pkgconf tesseract-ocr-dev leptonica-dev
+  ```
+
+  ### Windows
+
+  Native Windows builds are not supported out of the box. Use **WSL2 with
+  Ubuntu 24.04** and follow the Debian/Ubuntu instructions above — this is
+  the path of least resistance and is what we test against.
+
+  Building natively requires MSYS2 / MinGW-w64 with `g++`, `pkg-config`,
+  `mingw-w64-x86_64-tesseract-ocr`, and `mingw-w64-x86_64-leptonica`
+  available on `PATH`. Untested upstream — patches welcome.
+
+* Elixir **≥ 1.17** and OTP **≥ 26**.
+
+* A working C++17 compiler (`g++` or `clang++`) and `pkg-config` on the
+  build host. The NIF is built with `elixir_make` on first compile.
 
 ## Installation
 
@@ -46,8 +89,8 @@ so the package is usable out of the box.
 ## Quick start
 
 ```elixir
-{:ok, ocr}  = ImageOcr.new()                       # defaults to language: "en"
-{:ok, text} = ImageOcr.read_text(ocr, "page.png")
+{:ok, ocr}  = Image.OCR.new()                       # defaults to language: "en"
+{:ok, text} = Image.OCR.read_text(ocr, "page.png")
 ```
 
 `read_text/3` accepts:
@@ -58,16 +101,53 @@ so the package is usable out of the box.
   via `Vix.Vips.Image.new_from_buffer/1`
 
 For per-word output with confidence and bounding boxes, use
-`ImageOcr.recognize/3`:
+`Image.OCR.recognize/3`:
 
 ```elixir
-{:ok, words} = ImageOcr.recognize(ocr, image)
+{:ok, words} = Image.OCR.recognize(ocr, image)
 # => [%{text: "Hello", confidence: 96.4, bbox: {32, 18, 198, 64}}, …]
+```
+
+## Locales
+
+The `:locale` option (and the mix-task language arguments) accept:
+
+* **ISO 639-1** two-letter codes — `"en"`, `:en`, `"fr"`, `:de`, `"ja"`.
+
+* **BCP-47** tags for region- or script-specific variants — `"zh-Hans"`
+  (Simplified Chinese), `"zh-Hant"` (Traditional), `"sr-Latn"` (Serbian
+  in Latin script), `"az-Cyrl"`. The built-in table covers the common
+  cases.
+
+* **Any BCP-47 locale** — `"en-US"`, `"fr-CA"`, `"zh-Hans-CN"`,
+  `"sr-Latn-RS"` — when the optional [`:localize`](https://hex.pm/packages/localize)
+  dependency is installed. With Localize, the locale is parsed and the
+  language + script subtags are used to pick the right Tesseract trained
+  data; territory subtags are ignored (Tesseract doesn't differentiate by
+  territory).
+
+* **Tesseract codes** verbatim — `"frk"` (German Fraktur), `"osd"`
+  (orientation/script detection), `"script/Latin"`.
+
+* **`+`-joined combinations** — `"en+fr"`, `"chi_sim+eng"`, `"ja+en"`.
+
+`"zh"` on its own is rejected as ambiguous — use `"zh-Hans"` or
+`"zh-Hant"`. See `Image.OCR.Languages` for the full mapping table.
+
+To enable BCP-47 parsing add Localize to your project:
+
+```elixir
+def deps do
+  [
+    {:image_ocr, "~> 0.1.0"},
+    {:localize, "~> 0.25"}
+  ]
+end
 ```
 
 ## Concurrency
 
-A single `ImageOcr` instance wraps one `tesseract::TessBaseAPI`, which is **not
+A single `Image.OCR` instance wraps one `tesseract::TessBaseAPI`, which is **not
 safe for concurrent use**. The NIF guards each instance with a mutex so
 accidental sharing degrades to serialisation rather than UB, but for real
 parallelism you want one instance per worker. The simplest way is the
@@ -75,12 +155,12 @@ included pool:
 
 ```elixir
 children = [
-  {ImageOcr.Pool, name: MyOcr, language: "eng", pool_size: 4}
+  {Image.OCR.Pool, name: MyOcr, locale: "en", pool_size: 4}
 ]
 
 Supervisor.start_link(children, strategy: :one_for_one)
 
-{:ok, text} = ImageOcr.Pool.read_text(MyOcr, "page.png")
+{:ok, text} = Image.OCR.Pool.read_text(MyOcr, "page.png")
 ```
 
 `pool_size` defaults to `System.schedulers_online()`. Each worker holds the
@@ -95,7 +175,7 @@ schedulers regardless of pool size.
 
 The trained-data directory is resolved in this order:
 
-1. The `:datapath` option passed to `ImageOcr.new/1`.
+1. The `:datapath` option passed to `Image.OCR.new/1`.
 2. `Application.get_env(:image_ocr, :tessdata_path)`.
 3. The `TESSDATA_PREFIX` environment variable.
 4. The vendored fallback at `priv/tessdata/`.
@@ -112,26 +192,29 @@ config :image_ocr, tessdata_path: "/var/lib/image_ocr/tessdata"
 Manage trained-data files without leaving your project:
 
 ```bash
-# Install one or more languages
-mix image_ocr.tessdata.add fra deu
+# Install one or more languages (ISO 639-1 codes)
+mix image.ocr.tessdata.add fr de
 
-# Use a specific variant ("fast" / "best" / "legacy") or branch
-mix image_ocr.tessdata.add chi_sim --variant best
+# BCP-47 for region/script-specific variants
+mix image.ocr.tessdata.add zh-Hans zh-Hant sr-Latn
 
-# Write to a specific directory (overrides config)
-mix image_ocr.tessdata.add jpn --path /var/lib/tessdata
+# Pick a variant: fast (default, ~2-4 MB), best (~10-15 MB), legacy (largest)
+mix image.ocr.tessdata.add en --variant best
+
+# Write to a specific directory (overrides config and TESSDATA_PREFIX)
+mix image.ocr.tessdata.add ja --path /var/lib/tessdata
 
 # Refresh every installed language to its latest upstream commit
-mix image_ocr.tessdata.update
+mix image.ocr.tessdata.update
 
 # Show what's installed
-mix image_ocr.tessdata.list
+mix image.ocr.tessdata.list
 
 # Remove a language
-mix image_ocr.tessdata.remove deu
+mix image.ocr.tessdata.remove de
 ```
 
-The tasks read from and write to the same path that `ImageOcr.new/1` does, so
+The tasks read from and write to the same path that `Image.OCR.new/1` does, so
 there is one source of truth.
 
 ## Tesseract 4.x vs 5.x
@@ -142,6 +225,12 @@ distros, and runs noticeably faster than 4.x on modern CPUs thanks to better
 SIMD use and float32 models. The C++ API surface we use is identical between
 4.x and 5.x, so 4.1+ would likely work — but we keep the support matrix
 tight.
+
+## Livebook
+
+An interactive demonstration is at [`notebooks/demo.livemd`](notebooks/demo.livemd).
+It covers one-shot OCR, reusable instances, per-word bounding boxes, the
+NimblePool, PSM/SetVariable tweaks, and uploading your own image.
 
 ## License
 

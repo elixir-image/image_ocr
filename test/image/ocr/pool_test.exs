@@ -1,23 +1,23 @@
-defmodule ImageOcr.PoolTest do
+defmodule Image.OCR.PoolTest do
   use ExUnit.Case, async: true
 
-  import ImageOcr.TestFixtures
+  import Image.OCR.TestFixtures
 
   setup do
     name = :"pool_#{System.unique_integer([:positive])}"
-    start_supervised!({ImageOcr.Pool, name: name, pool_size: 4})
+    start_supervised!({Image.OCR.Pool, name: name, pool_size: 4})
     %{pool: name}
   end
 
   test "read_text/3 returns recognised text", %{pool: pool} do
     image = text_image("Pool Hello")
-    assert {:ok, text} = ImageOcr.Pool.read_text(pool, image)
+    assert {:ok, text} = Image.OCR.Pool.read_text(pool, image)
     assert text =~ "Pool"
   end
 
   test "recognize/3 returns per-word results", %{pool: pool} do
     image = text_image("Words Words")
-    assert {:ok, [_ | _] = words} = ImageOcr.Pool.recognize(pool, image)
+    assert {:ok, [_ | _] = words} = Image.OCR.Pool.recognize(pool, image)
     assert Enum.all?(words, &is_map/1)
   end
 
@@ -43,7 +43,7 @@ defmodule ImageOcr.PoolTest do
       |> Task.async_stream(
         fn i ->
           {expected, image} = Enum.at(inputs, rem(i, length(inputs)))
-          {:ok, text} = ImageOcr.Pool.read_text(pool, image)
+          {:ok, text} = Image.OCR.Pool.read_text(pool, image)
           {expected, String.trim(text)}
         end,
         max_concurrency: 8,

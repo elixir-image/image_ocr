@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.ImageOcr.Tessdata.Remove do
+defmodule Mix.Tasks.Image.OCR.Tessdata.Remove do
   @shortdoc "Remove an installed Tesseract trained-data file"
 
   @moduledoc """
@@ -7,16 +7,16 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Remove do
 
   ## Usage
 
-      mix image_ocr.tessdata.remove LANG [LANG ...] [--path DIR]
+      mix image.ocr.tessdata.remove LANG [LANG ...] [--path DIR]
 
   Languages can be specified using the same identifiers accepted by
-  `mix image_ocr.tessdata.add` (ISO 639-1, BCP-47, or Tesseract codes).
+  `mix image.ocr.tessdata.add` (ISO 639-1, BCP-47, or Tesseract codes).
   """
 
   use Mix.Task
 
-  alias ImageOcr.{Languages, Tessdata}
-  alias ImageOcr.Tessdata.Manifest
+  alias Image.OCR.{Languages, Tessdata}
+  alias Image.OCR.Tessdata.Manifest
 
   @switches [path: :string]
 
@@ -25,7 +25,7 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Remove do
     {opts, langs, _} = OptionParser.parse(args, switches: @switches)
 
     if langs == [] do
-      Mix.raise("usage: mix image_ocr.tessdata.remove LANG [LANG ...]")
+      Mix.raise("usage: mix image.ocr.tessdata.remove LANG [LANG ...]")
     end
 
     Mix.Task.run("app.config")

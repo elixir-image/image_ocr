@@ -1,4 +1,4 @@
-defmodule ImageOcr.Nif do
+defmodule Image.OCR.Nif do
   @moduledoc false
 
   @on_load :load_nif

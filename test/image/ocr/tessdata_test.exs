@@ -1,10 +1,10 @@
-defmodule ImageOcr.TessdataTest do
+defmodule Image.OCR.TessdataTest do
   # async: false because these tests mutate Application env / OS env
   # (`:image_ocr, :tessdata_path` and `TESSDATA_PREFIX`), which is global
-  # state that would otherwise race ImageOcr.new/1 calls in other modules.
+  # state that would otherwise race Image.OCR.new/1 calls in other modules.
   use ExUnit.Case, async: false
 
-  alias ImageOcr.Tessdata
+  alias Image.OCR.Tessdata
 
   describe "datapath/1" do
     test "explicit option wins" do

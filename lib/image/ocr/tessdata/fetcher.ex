@@ -1,4 +1,4 @@
-defmodule ImageOcr.Tessdata.Fetcher do
+defmodule Image.OCR.Tessdata.Fetcher do
   @moduledoc false
 
   @repos %{

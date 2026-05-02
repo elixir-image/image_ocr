@@ -1,12 +1,12 @@
-defmodule ImageOcr.Tessdata do
+defmodule Image.OCR.Tessdata do
   @moduledoc """
   Helpers for resolving and managing Tesseract trained-data (`tessdata`) files.
 
   Trained-data files (`<lang>.traineddata`) live in a directory that Tesseract
-  reads at initialisation time. `ImageOcr` resolves that directory in the
+  reads at initialisation time. `Image.OCR` resolves that directory in the
   following order:
 
-  1. The `:datapath` option passed to `ImageOcr.new/1`.
+  1. The `:datapath` option passed to `Image.OCR.new/1`.
 
   2. The `:tessdata_path` application environment value:
 
@@ -16,7 +16,7 @@ defmodule ImageOcr.Tessdata do
 
   4. The vendored fallback at `priv/tessdata/` inside the `:image_ocr` package.
 
-  See `Mix.Tasks.ImageOcr.Tessdata.Add` and friends for managing the contents
+  See `Mix.Tasks.Image.OCR.Tessdata.Add` and friends for managing the contents
   of a configured directory.
 
   """
@@ -42,7 +42,7 @@ defmodule ImageOcr.Tessdata do
 
   ### Examples
 
-      iex> path = ImageOcr.Tessdata.datapath()
+      iex> path = Image.OCR.Tessdata.datapath()
       iex> File.dir?(path)
       true
 
@@ -79,7 +79,7 @@ defmodule ImageOcr.Tessdata do
 
   ### Examples
 
-      iex> ImageOcr.Tessdata.vendored_path() |> String.ends_with?("priv/tessdata")
+      iex> Image.OCR.Tessdata.vendored_path() |> String.ends_with?("priv/tessdata")
       true
 
   """
@@ -106,7 +106,7 @@ defmodule ImageOcr.Tessdata do
 
   ### Examples
 
-      iex> "eng" in ImageOcr.Tessdata.installed_languages()
+      iex> "eng" in Image.OCR.Tessdata.installed_languages()
       true
 
   """

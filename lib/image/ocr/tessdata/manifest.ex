@@ -1,4 +1,4 @@
-defmodule ImageOcr.Tessdata.Manifest do
+defmodule Image.OCR.Tessdata.Manifest do
   @moduledoc false
 
   # Reads/writes priv/tessdata/VERSION (or wherever tessdata lives), tracking

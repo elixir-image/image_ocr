@@ -1,11 +1,11 @@
-// image_ocr NIF: thin wrapper around tesseract::TessBaseAPI.
+// Image.OCR NIF: thin wrapper around tesseract::TessBaseAPI.
 //
 // Concurrency model:
-//   * Each %ImageOcr{} owns one TessBaseAPI*. TessBaseAPI is NOT safe for
+//   * Each %Image.OCR{} owns one TessBaseAPI*. TessBaseAPI is NOT safe for
 //     concurrent use on the same instance. We hold a per-resource ErlNifMutex
 //     so accidental sharing degrades to serialization rather than UB.
 //   * For real parallelism, callers create one instance per worker (see
-//     ImageOcr.Pool). All recognition entry points are dirty-CPU NIFs.
+//     Image.OCR.Pool). All recognition entry points are dirty-CPU NIFs.
 
 #include <cstring>
 #include <string>
@@ -287,4 +287,4 @@ ErlNifFunc nif_funcs[] = {
 
 }  // namespace
 
-ERL_NIF_INIT(Elixir.ImageOcr.Nif, nif_funcs, load, nullptr, nullptr, nullptr)
+ERL_NIF_INIT(Elixir.Image.OCR.Nif, nif_funcs, load, nullptr, nullptr, nullptr)

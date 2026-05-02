@@ -1,9 +1,9 @@
-defmodule ImageOcr.Languages do
+defmodule Image.OCR.Languages do
   @moduledoc """
   Translation between user-facing language identifiers and Tesseract's
   trained-data filename codes.
 
-  All public `ImageOcr` and mix-task language arguments accept any of:
+  All public `Image.OCR` and mix-task language arguments accept any of:
 
   * An ISO 639-1 two-letter code, as a string or atom: `"en"`, `:en`,
     `"fr"`, `:de`.
@@ -152,16 +152,16 @@ defmodule ImageOcr.Languages do
 
   ### Examples
 
-      iex> ImageOcr.Languages.to_tesseract(:en)
+      iex> Image.OCR.Languages.to_tesseract(:en)
       "eng"
 
-      iex> ImageOcr.Languages.to_tesseract("zh-Hans")
+      iex> Image.OCR.Languages.to_tesseract("zh-Hans")
       "chi_sim"
 
-      iex> ImageOcr.Languages.to_tesseract("en+fr")
+      iex> Image.OCR.Languages.to_tesseract("en+fr")
       "eng+fra"
 
-      iex> ImageOcr.Languages.to_tesseract("frk")
+      iex> Image.OCR.Languages.to_tesseract("frk")
       "frk"
 
   """
@@ -180,10 +180,10 @@ defmodule ImageOcr.Languages do
 
   ### Examples
 
-      iex> ImageOcr.Languages.from_tesseract("eng")
+      iex> Image.OCR.Languages.from_tesseract("eng")
       "en"
 
-      iex> ImageOcr.Languages.from_tesseract("frk")
+      iex> Image.OCR.Languages.from_tesseract("frk")
       "frk"
 
   """
@@ -207,20 +207,84 @@ defmodule ImageOcr.Languages do
         Map.fetch!(@iso639_1, code)
 
       String.contains?(code, "-") ->
-        raise ArgumentError, "unknown BCP-47 language tag: #{inspect(code)}"
+        translate_bcp47(code)
 
       String.length(code) == 2 ->
         if code == "zh" do
           raise ArgumentError,
-                "ambiguous language code \"zh\" — use \"zh-Hans\" (Simplified) or \"zh-Hant\" (Traditional)"
+                "ambiguous locale \"zh\" — use \"zh-Hans\" (Simplified) or \"zh-Hant\" (Traditional)"
         else
-          raise ArgumentError, "unknown ISO 639-1 language code: #{inspect(code)}"
+          raise ArgumentError, "unknown ISO 639-1 locale: #{inspect(code)}"
         end
 
       true ->
         # Tesseract code (eng, chi_sim, frk, osd, script/Latin, …) — pass
         # through unchanged.
         code
+    end
+  end
+
+  # ----------------------------------------------------------------------
+  # BCP-47 fallback — compile-fenced on the optional `:localize` dependency.
+  # When Localize is available we accept any BCP-47 locale (e.g. "en-US",
+  # "fr-CA", "zh-Hans-CN", "sr-Latn-RS"), parse it with
+  # `Localize.LanguageTag.parse/1`, and resolve the right Tesseract code
+  # from the language + script subtags. Without Localize we only know the
+  # short table at the top of this module.
+  # ----------------------------------------------------------------------
+
+  if Code.ensure_loaded?(Localize.LanguageTag) do
+    @doc false
+    def localize_available?, do: true
+
+    defp translate_bcp47(code) do
+      case Localize.LanguageTag.parse(code) do
+        {:ok, %Localize.LanguageTag{language: language, script: script}} ->
+          compose_from_subtags(language, script, code)
+
+        {:error, _} ->
+          raise ArgumentError, "unparseable BCP-47 locale: #{inspect(code)}"
+      end
+    end
+
+    # Map (language, script) atoms returned by Localize into a Tesseract code.
+    # When script is required to disambiguate (zh, sr, az, uz) we use it;
+    # otherwise we fall back to the language portion alone.
+    defp compose_from_subtags(:zh, :Hans, _), do: "chi_sim"
+    defp compose_from_subtags(:zh, :Hant, _), do: "chi_tra"
+    defp compose_from_subtags(:zh, nil, code), do: ambiguous_zh!(code)
+    defp compose_from_subtags(:sr, :Latn, _), do: "srp_latn"
+    defp compose_from_subtags(:sr, :Cyrl, _), do: "srp"
+    defp compose_from_subtags(:az, :Cyrl, _), do: "aze_cyrl"
+    defp compose_from_subtags(:uz, :Cyrl, _), do: "uzb_cyrl"
+
+    defp compose_from_subtags(language, _script, code) when is_atom(language) do
+      lang_str = Atom.to_string(language)
+
+      case Map.fetch(@iso639_1, lang_str) do
+        {:ok, tess_code} ->
+          tess_code
+
+        :error ->
+          raise ArgumentError,
+                "no Tesseract trained-data mapping for locale #{inspect(code)} " <>
+                  "(language #{inspect(language)})"
+      end
+    end
+
+    defp ambiguous_zh!(code) do
+      raise ArgumentError,
+            "ambiguous Chinese locale #{inspect(code)} — script subtag required " <>
+              "(\"zh-Hans\" or \"zh-Hant\")"
+    end
+  else
+    @doc false
+    def localize_available?, do: false
+
+    defp translate_bcp47(code) do
+      raise ArgumentError,
+            "unknown BCP-47 locale: #{inspect(code)}. Add `{:localize, \"~> 0.25\"}` " <>
+              "to your dependencies for full BCP-47 support."
     end
   end
 end

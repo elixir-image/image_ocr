@@ -1,9 +1,9 @@
-defmodule ImageOcr.LanguagesTest do
+defmodule Image.OCR.LanguagesTest do
   use ExUnit.Case, async: true
 
-  doctest ImageOcr.Languages
+  doctest Image.OCR.Languages
 
-  alias ImageOcr.Languages
+  alias Image.OCR.Languages
 
   describe "to_tesseract/1" do
     test "translates ISO 639-1 strings" do
@@ -52,9 +52,42 @@ defmodule ImageOcr.LanguagesTest do
       end
     end
 
-    test "rejects unknown BCP-47 tags" do
-      assert_raise ArgumentError, ~r/unknown BCP-47/, fn ->
-        Languages.to_tesseract("xx-Hans")
+    test "rejects parseable BCP-47 tags with no Tesseract mapping" do
+      assert_raise ArgumentError, ~r/no Tesseract trained-data mapping/, fn ->
+        Languages.to_tesseract("qq-XX")
+      end
+    end
+  end
+
+  describe "to_tesseract/1 with Localize" do
+    @describetag :localize
+
+    setup do
+      unless Languages.localize_available?() do
+        flunk("Localize must be loaded for these tests")
+      end
+
+      :ok
+    end
+
+    test "parses BCP-47 with territory subtag" do
+      assert Languages.to_tesseract("en-US") == "eng"
+      assert Languages.to_tesseract("fr-CA") == "fra"
+      assert Languages.to_tesseract("pt-BR") == "por"
+    end
+
+    test "parses BCP-47 with script + territory" do
+      assert Languages.to_tesseract("zh-Hans-CN") == "chi_sim"
+      assert Languages.to_tesseract("zh-Hant-TW") == "chi_tra"
+      assert Languages.to_tesseract("sr-Latn-RS") == "srp_latn"
+      assert Languages.to_tesseract("sr-Cyrl-RS") == "srp"
+    end
+
+    test "rejects ambiguous zh-* without script" do
+      assert_raise ArgumentError, ~r/ambiguous Chinese/, fn ->
+        # zh-XX with an unknown territory has no script subtag and Localize
+        # doesn't add likely subtags by default.
+        Languages.to_tesseract("zh-x-private")
       end
     end
   end

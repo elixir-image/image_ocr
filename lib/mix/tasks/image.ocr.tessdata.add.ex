@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.ImageOcr.Tessdata.Add do
+defmodule Mix.Tasks.Image.OCR.Tessdata.Add do
   @shortdoc "Download a Tesseract trained-data file for one or more languages"
 
   @moduledoc """
@@ -7,7 +7,7 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Add do
 
   ## Usage
 
-      mix image_ocr.tessdata.add LANG [LANG ...] [--variant fast|best|legacy]
+      mix image.ocr.tessdata.add LANG [LANG ...] [--variant fast|best|legacy]
                                                  [--branch BRANCH]
                                                  [--path DIR]
                                                  [--source URL]
@@ -16,7 +16,7 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Add do
   Languages are specified using ISO 639-1 codes (`en`, `fr`, `de`), BCP-47
   tags for region/script-specific variants (`zh-Hans`, `zh-Hant`,
   `sr-Latn`), or Tesseract codes verbatim where ISO 639-1 cannot express
-  the language (`frk`, `osd`). See `ImageOcr.Languages`.
+  the language (`frk`, `osd`). See `Image.OCR.Languages`.
 
   ### Options
 
@@ -28,12 +28,12 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Add do
 
                      To install the larger / more accurate English data:
 
-                         mix image_ocr.tessdata.add en --variant best
+                         mix image.ocr.tessdata.add en --variant best
 
     * `--branch`   — Upstream git branch to fetch from. Defaults to `main`.
 
     * `--path`     — Destination directory. Defaults to the value resolved by
-                     `ImageOcr.Tessdata.datapath/0` (which honours the
+                     `Image.OCR.Tessdata.datapath/0` (which honours the
                      `:image_ocr, :tessdata_path` application config and the
                      `TESSDATA_PREFIX` environment variable).
 
@@ -45,16 +45,16 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Add do
 
   ## Examples
 
-      mix image_ocr.tessdata.add en
-      mix image_ocr.tessdata.add fr de --variant best
-      mix image_ocr.tessdata.add zh-Hans --path /var/lib/tessdata
-      mix image_ocr.tessdata.add ja zh-Hant ko
+      mix image.ocr.tessdata.add en
+      mix image.ocr.tessdata.add fr de --variant best
+      mix image.ocr.tessdata.add zh-Hans --path /var/lib/tessdata
+      mix image.ocr.tessdata.add ja zh-Hant ko
   """
 
   use Mix.Task
 
-  alias ImageOcr.{Languages, Tessdata}
-  alias ImageOcr.Tessdata.{Fetcher, Manifest}
+  alias Image.OCR.{Languages, Tessdata}
+  alias Image.OCR.Tessdata.{Fetcher, Manifest}
 
   @switches [
     variant: :string,
@@ -69,7 +69,7 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Add do
     {opts, langs, _} = OptionParser.parse(args, switches: @switches)
 
     if langs == [] do
-      Mix.raise("usage: mix image_ocr.tessdata.add LANG [LANG ...]")
+      Mix.raise("usage: mix image.ocr.tessdata.add LANG [LANG ...]")
     end
 
     if opts[:source] && length(langs) > 1 do

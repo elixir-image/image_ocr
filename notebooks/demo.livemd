@@ -1,0 +1,248 @@
+# Image.OCR Demo
+
+## Prerequisites
+
+> #### Install Tesseract first {: .warning}
+>
+> `image_ocr` is a NIF binding — it cannot start without **Tesseract ≥ 5.0**
+> and Leptonica installed on the host running this Livebook. The first
+> `Mix.install/2` cell below will fail to compile the NIF if these are
+> missing.
+>
+> | Platform | One-liner |
+> | --- | --- |
+> | macOS | `brew install tesseract leptonica pkg-config` |
+> | Debian / Ubuntu 24.04+ | `sudo apt-get install -y build-essential pkg-config libtesseract-dev libleptonica-dev tesseract-ocr` |
+> | Fedora / RHEL | `sudo dnf install -y gcc-c++ pkgconf-pkg-config tesseract-devel leptonica-devel` |
+> | Arch | `sudo pacman -S base-devel pkgconf tesseract leptonica` |
+> | Alpine | `apk add build-base pkgconf tesseract-ocr-dev leptonica-dev` |
+> | Windows | Use WSL2 with Ubuntu 24.04 and follow the Debian/Ubuntu row. |
+>
+> Verify with `tesseract --version` and `pkg-config --modversion tesseract`
+> in your shell before continuing.
+
+```elixir
+Mix.install(
+  [
+    {:image_ocr, path: Path.expand("..", __DIR__)},
+    {:image, "~> 0.66"},
+    {:kino, "~> 0.14"}
+  ]
+)
+```
+
+## 1. What's installed
+
+```elixir
+%{
+  tesseract_version: Image.OCR.tesseract_version(),
+  trained_data_path: Image.OCR.Tessdata.datapath(),
+  installed_languages: Image.OCR.Tessdata.installed_languages(),
+  schedulers_online: System.schedulers_online()
+}
+```
+
+## 2. Render a test image
+
+`Image.OCR` accepts any `Vix.Vips.Image`. The `Image` library makes it
+easy to render text on a white background that Tesseract can read.
+
+```elixir
+render_text = fn string ->
+  Image.text!(string,
+    font_size: 48,
+    text_fill_color: :black,
+    background_fill_color: :white,
+    padding: 40
+  )
+end
+
+sample = render_text.("The quick brown fox\njumps over the lazy dog.")
+Image.to_kino(sample)
+```
+
+## 3. One-shot OCR
+
+The simplest possible call — no instance management:
+
+```elixir
+{:ok, text} = Image.OCR.quick_read(sample)
+text
+```
+
+## 4. Reusable instance
+
+For repeated calls, build an instance once and reuse it. The `:locale`
+option accepts ISO 639-1 codes (`:en`, `"fr"`), BCP-47 region/script tags
+(`"zh-Hans"`, `"sr-Latn"`), or Tesseract codes verbatim (`"frk"`,
+`"osd"`). Add the optional `:localize` dependency for full BCP-47 support
+(`"en-US"`, `"zh-Hans-CN"`, etc.).
+
+```elixir
+{:ok, ocr} = Image.OCR.new(locale: :en, psm: :auto)
+ocr
+```
+
+```elixir
+phrases = [
+  "Hello, Tesseract!",
+  "Elixir is fun.",
+  "Image processing with vips.",
+  "Optical character recognition."
+]
+
+phrases
+|> Enum.map(&{&1, render_text.(&1)})
+|> Enum.map(fn {expected, image} ->
+  {:ok, recognised} = Image.OCR.read_text(ocr, image)
+  %{expected: expected, recognised: String.trim(recognised)}
+end)
+|> Kino.DataTable.new()
+```
+
+## 5. Per-word results with bounding boxes
+
+`Image.OCR.recognize/3` returns each word together with a confidence (0-100)
+and bounding box (`{x1, y1, x2, y2}` in image coordinates).
+
+```elixir
+sample2 = render_text.("Words have boxes around them.")
+{:ok, words} = Image.OCR.recognize(ocr, sample2)
+
+table =
+  Enum.map(words, fn %{text: text, confidence: conf, bbox: {x1, y1, x2, y2}} ->
+    %{
+      text: text,
+      confidence: Float.round(conf, 1),
+      x1: x1,
+      y1: y1,
+      x2: x2,
+      y2: y2,
+      width: x2 - x1,
+      height: y2 - y1
+    }
+  end)
+
+Kino.Layout.grid([Image.to_kino(sample2), Kino.DataTable.new(table)], columns: 1)
+```
+
+## 6. Concurrency with `Image.OCR.Pool`
+
+A single Tesseract instance is single-threaded. For real parallelism, use
+the supplied `NimblePool`-backed pool — one OCR instance per worker.
+
+```elixir
+pool_name = :demo_pool
+pool_size = min(4, System.schedulers_online())
+
+# Stop any previous pool we started in this notebook so re-running the
+# cell is idempotent.
+case Process.whereis(pool_name) do
+  nil -> :ok
+  pid -> GenServer.stop(pid)
+end
+
+{:ok, _} = Image.OCR.Pool.start_link(name: pool_name, locale: :en, pool_size: pool_size)
+:ok
+```
+
+```elixir
+images = Enum.map(phrases, render_text)
+
+time = fn fun ->
+  {micros, result} = :timer.tc(fun)
+  {Float.round(micros / 1_000, 1), result}
+end
+
+{sequential_ms, sequential_results} =
+  time.(fn ->
+    Enum.map(images, &Image.OCR.read_text(ocr, &1))
+  end)
+
+{parallel_ms, parallel_results} =
+  time.(fn ->
+    images
+    |> Task.async_stream(&Image.OCR.Pool.read_text(pool_name, &1),
+      max_concurrency: pool_size,
+      timeout: 30_000
+    )
+    |> Enum.map(fn {:ok, r} -> r end)
+  end)
+
+%{
+  pool_size: pool_size,
+  sequential_ms: sequential_ms,
+  parallel_ms: parallel_ms,
+  speedup: Float.round(sequential_ms / parallel_ms, 2),
+  results_match: sequential_results == parallel_results
+}
+```
+
+## 7. OCR your own image
+
+Drop in a PNG, JPEG, or TIFF — the input pipeline accepts file paths,
+in-memory binaries, and live `Vix.Vips.Image` values transparently.
+
+```elixir
+upload = Kino.Input.image("Image to OCR")
+```
+
+```elixir
+case Kino.Input.read(upload) do
+  nil ->
+    Kino.Markdown.new("_Upload an image above and re-run this cell._")
+
+  %{file_ref: ref} ->
+    path = Kino.Input.file_path(ref)
+    {:ok, image} = Image.open(path)
+    {:ok, recognised} = Image.OCR.read_text(ocr, image)
+
+    Kino.Layout.grid(
+      [
+        Image.to_kino(image),
+        Kino.Markdown.new("**Recognised text:**"),
+        Kino.Markdown.new("```\n" <> recognised <> "\n```")
+      ],
+      columns: 1
+    )
+end
+```
+
+## 8. Tweaking accuracy with PSM and SetVariable
+
+Tesseract has 14 page-segmentation modes and exposes ~700 internal
+variables. Both can be set on `Image.OCR.new/1`.
+
+```elixir
+digits = render_text.("4815162342")
+
+{:ok, default_ocr} = Image.OCR.new()
+
+{:ok, digits_only} =
+  Image.OCR.new(
+    psm: :single_line,
+    variables: [tessedit_char_whitelist: "0123456789"]
+  )
+
+%{
+  default: Image.OCR.read_text(default_ocr, digits) |> elem(1),
+  with_whitelist: Image.OCR.read_text(digits_only, digits) |> elem(1)
+}
+```
+
+## 9. Adding more languages
+
+To OCR text in other languages, install the relevant trained-data files
+from your terminal:
+
+```text
+mix image.ocr.tessdata.add fr de        # French + German, "fast" variant
+mix image.ocr.tessdata.add en --variant best   # high-accuracy English
+mix image.ocr.tessdata.add zh-Hans              # Simplified Chinese
+mix image.ocr.tessdata.list                     # show what's installed
+mix image.ocr.tessdata.update                   # refresh to latest upstream
+```
+
+The destination directory is resolved by `Image.OCR.Tessdata.datapath/0`
+(option → `:image_ocr, :tessdata_path` config → `TESSDATA_PREFIX` env →
+vendored `priv/tessdata/`).

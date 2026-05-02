@@ -1,4 +1,4 @@
-defmodule ImageOcr.MixProject do
+defmodule Image.OCR.MixProject do
   use Mix.Project
 
   @version "0.1.0"
@@ -36,6 +36,7 @@ defmodule ImageOcr.MixProject do
     [
       {:vix, "~> 0.30"},
       {:nimble_pool, "~> 1.1"},
+      {:localize, "~> 0.25", optional: true},
       {:elixir_make, "~> 0.8", runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
@@ -53,6 +54,7 @@ defmodule ImageOcr.MixProject do
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files: ~w(lib c_src priv/tessdata/eng.traineddata priv/tessdata/VERSION
+           notebooks
            Makefile mix.exs README.md CHANGELOG.md LICENSE logo.jpg .formatter.exs)
     ]
   end
@@ -71,7 +73,11 @@ defmodule ImageOcr.MixProject do
     [
       main: "readme",
       logo: "logo.jpg",
-      extras: ["README.md", "CHANGELOG.md"],
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "notebooks/demo.livemd": [title: "Demo Livebook"]
+      ],
       source_ref: "v#{@version}"
     ]
   end

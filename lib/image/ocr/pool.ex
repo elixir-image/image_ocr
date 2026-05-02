@@ -1,8 +1,8 @@
-defmodule ImageOcr.Pool do
+defmodule Image.OCR.Pool do
   @moduledoc """
-  A `NimblePool`-backed pool of `ImageOcr` instances for concurrent OCR.
+  A `NimblePool`-backed pool of `Image.OCR` instances for concurrent OCR.
 
-  Each pool worker owns one `ImageOcr` instance — and therefore one
+  Each pool worker owns one `Image.OCR` instance — and therefore one
   `tesseract::TessBaseAPI*`. Because each instance is single-threaded, the
   pool is the simplest way to get parallel recognition across many processes
   without sharing state.
@@ -17,11 +17,11 @@ defmodule ImageOcr.Pool do
   ## Example
 
       children = [
-        {ImageOcr.Pool, name: MyOcr, language: "eng", pool_size: 4}
+        {Image.OCR.Pool, name: MyOcr, locale: "en", pool_size: 4}
       ]
       Supervisor.start_link(children, strategy: :one_for_one)
 
-      {:ok, text} = ImageOcr.Pool.read_text(MyOcr, "page.png")
+      {:ok, text} = Image.OCR.Pool.read_text(MyOcr, "page.png")
 
   """
 
@@ -45,7 +45,7 @@ defmodule ImageOcr.Pool do
 
   * `:lazy` controls lazy worker initialisation. Defaults to `false`.
 
-  * Remaining options are passed straight to `ImageOcr.new/1` (`:language`,
+  * Remaining options are passed straight to `Image.OCR.new/1` (`:locale`,
     `:datapath`, `:psm`, `:variables`).
 
   ### Returns
@@ -60,7 +60,7 @@ defmodule ImageOcr.Pool do
     {pool_size, options} = Keyword.pop(options, :pool_size, System.schedulers_online())
     {lazy, options} = Keyword.pop(options, :lazy, false)
     {name, options} = Keyword.pop(options, :name)
-    name || raise ArgumentError, "ImageOcr.Pool requires a :name option"
+    name || raise ArgumentError, "Image.OCR.Pool requires a :name option"
 
     NimblePool.start_link(
       worker: {__MODULE__, options},
@@ -89,7 +89,7 @@ defmodule ImageOcr.Pool do
 
   * `pool` is the registered name of the pool.
 
-  * `input` is any value accepted by `ImageOcr.read_text/2`.
+  * `input` is any value accepted by `Image.OCR.read_text/2`.
 
   * `options` accepts `:timeout` (defaults to 30_000 ms).
 
@@ -100,7 +100,7 @@ defmodule ImageOcr.Pool do
   * `{:error, reason}` on failure.
 
   """
-  @spec read_text(NimblePool.pool(), ImageOcr.Input.t(), keyword()) ::
+  @spec read_text(NimblePool.pool(), Image.OCR.Input.t(), keyword()) ::
           {:ok, String.t()} | {:error, term()}
   def read_text(pool, input, options \\ []) do
     timeout = Keyword.get(options, :timeout, @default_checkout_timeout)
@@ -109,18 +109,18 @@ defmodule ImageOcr.Pool do
       pool,
       :checkout,
       fn _from, instance ->
-        {ImageOcr.read_text(instance, input), :ok}
+        {Image.OCR.read_text(instance, input), :ok}
       end,
       timeout
     )
   end
 
   @doc """
-  Recognises `input` and returns per-word results. See `ImageOcr.recognize/3`.
+  Recognises `input` and returns per-word results. See `Image.OCR.recognize/3`.
 
   """
-  @spec recognize(NimblePool.pool(), ImageOcr.Input.t(), keyword()) ::
-          {:ok, [ImageOcr.word_result()]} | {:error, term()}
+  @spec recognize(NimblePool.pool(), Image.OCR.Input.t(), keyword()) ::
+          {:ok, [Image.OCR.word_result()]} | {:error, term()}
   def recognize(pool, input, options \\ []) do
     timeout = Keyword.get(options, :timeout, @default_checkout_timeout)
 
@@ -128,7 +128,7 @@ defmodule ImageOcr.Pool do
       pool,
       :checkout,
       fn _from, instance ->
-        {ImageOcr.recognize(instance, input), :ok}
+        {Image.OCR.recognize(instance, input), :ok}
       end,
       timeout
     )
@@ -141,7 +141,7 @@ defmodule ImageOcr.Pool do
 
   @impl NimblePool
   def init_worker(options) do
-    case ImageOcr.new(options) do
+    case Image.OCR.new(options) do
       {:ok, instance} -> {:ok, instance, options}
       {:error, reason} -> {:stop, {:image_ocr_init_failed, reason}}
     end

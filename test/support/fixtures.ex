@@ -1,4 +1,4 @@
-defmodule ImageOcr.TestFixtures do
+defmodule Image.OCR.TestFixtures do
   @moduledoc false
 
   alias Vix.Vips.Operation

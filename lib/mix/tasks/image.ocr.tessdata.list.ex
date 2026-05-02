@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.ImageOcr.Tessdata.List do
+defmodule Mix.Tasks.Image.OCR.Tessdata.List do
   @shortdoc "List installed Tesseract trained-data files"
 
   @moduledoc """
@@ -7,13 +7,13 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.List do
 
   ## Usage
 
-      mix image_ocr.tessdata.list [--path DIR]
+      mix image.ocr.tessdata.list [--path DIR]
   """
 
   use Mix.Task
 
-  alias ImageOcr.{Languages, Tessdata}
-  alias ImageOcr.Tessdata.Manifest
+  alias Image.OCR.{Languages, Tessdata}
+  alias Image.OCR.Tessdata.Manifest
 
   @switches [path: :string]
 

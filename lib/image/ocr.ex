@@ -1,53 +1,53 @@
-defmodule ImageOcr do
+defmodule Image.OCR do
   @moduledoc """
   Idiomatic Elixir interface to the [Tesseract](https://github.com/tesseract-ocr/tesseract)
   OCR engine.
 
-  `ImageOcr` is a thin NIF binding (Tesseract 5.x) that accepts images as
+  `Image.OCR` is a thin NIF binding (Tesseract 5.x) that accepts images as
   `Vix.Vips.Image` structs, file paths, or in-memory image binaries and
   returns recognised text.
 
   ## Quick start
 
-      {:ok, instance} = ImageOcr.new()
-      {:ok, text}     = ImageOcr.read_text(instance, "page.png")
+      {:ok, instance} = Image.OCR.new()
+      {:ok, text}     = Image.OCR.read_text(instance, "page.png")
 
   Or, in one shot:
 
-      {:ok, text} = ImageOcr.read_text("page.png")
+      {:ok, text} = Image.OCR.read_text("page.png")
 
   ## Concurrency
 
-  A single `ImageOcr` instance wraps one `tesseract::TessBaseAPI`, which is
+  A single `Image.OCR` instance wraps one `tesseract::TessBaseAPI`, which is
   not safe for concurrent use. Calls on a shared instance are serialised
   through a per-instance mutex; for true parallelism, build one instance per
-  worker — the simplest way is `ImageOcr.Pool`.
+  worker — the simplest way is `Image.OCR.Pool`.
 
   ## Trained-data
 
-  `ImageOcr` ships with English (`eng`) trained-data. To install additional
-  languages, see `Mix.Tasks.ImageOcr.Tessdata.Add`. The trained-data location
-  is resolved by `ImageOcr.Tessdata.datapath/1`.
+  `Image.OCR` ships with English (`eng`) trained-data. To install additional
+  languages, see `Mix.Tasks.Image.OCR.Tessdata.Add`. The trained-data location
+  is resolved by `Image.OCR.Tessdata.datapath/1`.
 
   """
 
-  alias ImageOcr.{Input, Languages, Nif, Tessdata}
+  alias Image.OCR.{Input, Languages, Nif, Tessdata}
 
-  @enforce_keys [:ref, :language, :tesseract_language]
-  defstruct [:ref, :language, :tesseract_language, :datapath, :psm]
+  @enforce_keys [:ref, :locale, :tesseract_language]
+  defstruct [:ref, :locale, :tesseract_language, :datapath, :psm]
 
   @typedoc """
   An OCR instance — wraps a single Tesseract API resource.
 
-  * `:language` — the user-facing identifier as supplied to `new/1`
-    (typically an ISO 639-1 code like `"en"`).
+  * `:locale` — the user-facing locale identifier as supplied to `new/1`
+    (e.g. `"en"`, `"en-US"`, `"zh-Hans-CN"`).
 
   * `:tesseract_language` — the resolved Tesseract trained-data code that
     was passed to `TessBaseAPI::Init` (e.g. `"eng"`).
   """
   @type t :: %__MODULE__{
           ref: reference() | binary(),
-          language: String.t(),
+          locale: String.t(),
           tesseract_language: String.t(),
           datapath: String.t() | nil,
           psm: psm()
@@ -107,14 +107,15 @@ defmodule ImageOcr do
 
   ### Options
 
-  * `:language` is the language identifier. Accepts ISO 639-1 codes (`"en"`,
-    `:en`, `"fr"`), BCP-47 tags for region/script-specific variants
-    (`"zh-Hans"`, `"sr-Latn"`), Tesseract codes verbatim (`"frk"`, `"osd"`),
+  * `:locale` is the locale identifier. Accepts ISO 639-1 codes (`"en"`,
+    `:en`, `"fr"`), BCP-47 tags for region/script variants (`"en-US"`,
+    `"zh-Hans"`, `"sr-Latn"`), Tesseract codes verbatim (`"frk"`, `"osd"`),
     or `+`-joined combinations (`"en+fr"`, `"chi_sim+eng"`). Defaults to
-    `"en"`. See `ImageOcr.Languages`.
+    `"en"`. Full BCP-47 parsing requires the optional `:localize`
+    dependency. See `Image.OCR.Languages`.
 
   * `:datapath` is the directory containing `<language>.traineddata` files.
-    Defaults to the value resolved by `ImageOcr.Tessdata.datapath/1`.
+    Defaults to the value resolved by `Image.OCR.Tessdata.datapath/1`.
 
   * `:psm` is the page-segmentation mode atom. Defaults to `:auto`. See
     `t:psm/0` for the full list.
@@ -124,22 +125,22 @@ defmodule ImageOcr do
 
   ### Returns
 
-  * `{:ok, %ImageOcr{}}` on success.
+  * `{:ok, %Image.OCR{}}` on success.
 
   * `{:error, reason}` if Tesseract initialisation fails (commonly because
     the trained-data file is missing).
 
   ### Examples
 
-      iex> {:ok, ocr} = ImageOcr.new()
-      iex> {ocr.language, ocr.tesseract_language}
+      iex> {:ok, ocr} = Image.OCR.new()
+      iex> {ocr.locale, ocr.tesseract_language}
       {"en", "eng"}
 
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, term()}
   def new(options \\ []) do
-    language = Keyword.get(options, :language, "en") |> normalize_language()
-    tess_language = Languages.to_tesseract(language)
+    locale = Keyword.get(options, :locale, "en") |> normalize_locale()
+    tess_language = Languages.to_tesseract(locale)
     datapath = Tessdata.datapath(options)
     psm = Keyword.get(options, :psm, :auto)
     psm_int = Map.get(@psm_map, psm) || raise ArgumentError, "invalid :psm — #{inspect(psm)}"
@@ -150,7 +151,7 @@ defmodule ImageOcr do
       {:ok,
        %__MODULE__{
          ref: ref,
-         language: language,
+         locale: locale,
          tesseract_language: tess_language,
          datapath: datapath,
          psm: psm
@@ -158,8 +159,8 @@ defmodule ImageOcr do
     end
   end
 
-  defp normalize_language(code) when is_atom(code), do: Atom.to_string(code)
-  defp normalize_language(code) when is_binary(code), do: code
+  defp normalize_locale(code) when is_atom(code), do: Atom.to_string(code)
+  defp normalize_locale(code) when is_binary(code), do: code
 
   @doc """
   Recognises text in `input` using `instance` and returns the result as a
@@ -167,10 +168,10 @@ defmodule ImageOcr do
 
   ### Arguments
 
-  * `instance` is an `%ImageOcr{}` struct returned by `new/1`.
+  * `instance` is an `%Image.OCR{}` struct returned by `new/1`.
 
   * `input` is a `Vix.Vips.Image.t()`, a path to an image file, or a binary
-    of encoded image data. See `ImageOcr.Input`.
+    of encoded image data. See `Image.OCR.Input`.
 
   * `options` is reserved for future use.
 
@@ -182,10 +183,12 @@ defmodule ImageOcr do
 
   ### Examples
 
-      iex> {:ok, ocr} = ImageOcr.new()
-      iex> {:ok, text} = ImageOcr.read_text(ocr, "test/fixtures/hello.png")
-      iex> String.contains?(text, "Hello")
-      true
+      {:ok, ocr}  = Image.OCR.new()
+      {:ok, text} = Image.OCR.read_text(ocr, "page.png")
+
+      # Or with a Vix.Vips.Image already in memory:
+      {:ok, image} = Vix.Vips.Image.new_from_file("page.png")
+      {:ok, text}  = Image.OCR.read_text(ocr, image)
 
   """
   @spec read_text(t(), Input.t(), keyword()) :: {:ok, String.t()} | {:error, term()}
@@ -210,7 +213,7 @@ defmodule ImageOcr do
   returns the recognised text.
 
   Equivalent to `with {:ok, ocr} <- new(options), do: read_text(ocr, input)`.
-  Prefer `new/1` + `read_text/3` (or `ImageOcr.Pool`) when calling more than
+  Prefer `new/1` + `read_text/3` (or `Image.OCR.Pool`) when calling more than
   once — building a fresh Tesseract instance per call is expensive.
 
   ### Arguments
@@ -239,7 +242,7 @@ defmodule ImageOcr do
 
   ### Arguments
 
-  * `instance` is an `%ImageOcr{}` struct returned by `new/1`.
+  * `instance` is an `%Image.OCR{}` struct returned by `new/1`.
 
   * `input` is any value accepted by `read_text/3`.
 

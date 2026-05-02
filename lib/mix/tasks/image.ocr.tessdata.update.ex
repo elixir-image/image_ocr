@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.ImageOcr.Tessdata.Update do
+defmodule Mix.Tasks.Image.OCR.Tessdata.Update do
   @shortdoc "Refresh every installed Tesseract trained-data file"
 
   @moduledoc """
@@ -7,18 +7,18 @@ defmodule Mix.Tasks.ImageOcr.Tessdata.Update do
 
   ## Usage
 
-      mix image_ocr.tessdata.update [--path DIR]
+      mix image.ocr.tessdata.update [--path DIR]
 
   ### Options
 
     * `--path` — Directory to refresh. Defaults to the value resolved by
-      `ImageOcr.Tessdata.datapath/0`.
+      `Image.OCR.Tessdata.datapath/0`.
   """
 
   use Mix.Task
 
-  alias ImageOcr.Tessdata
-  alias ImageOcr.Tessdata.{Fetcher, Manifest}
+  alias Image.OCR.Tessdata
+  alias Image.OCR.Tessdata.{Fetcher, Manifest}
 
   @switches [path: :string]
 
