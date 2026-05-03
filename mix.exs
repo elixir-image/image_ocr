@@ -62,7 +62,7 @@ defmodule Image.OCR.MixProject do
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files: ~w(lib c_src priv/tessdata/eng.traineddata priv/tessdata/VERSION
-           notebooks
+           livebooks
            Makefile mix.exs README.md CHANGELOG.md LICENSE logo.jpg .formatter.exs)
     ]
   end

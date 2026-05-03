@@ -2,21 +2,21 @@
 
 ## Prerequisites
 
-> #### Install Tesseract first {: .warning}
+> #### Install Tesseract first
 >
 > `image_ocr` is a NIF binding — it cannot start without **Tesseract ≥ 5.0**
 > and Leptonica installed on the host running this Livebook. The first
 > `Mix.install/2` cell below will fail to compile the NIF if these are
 > missing.
 >
-> | Platform | One-liner |
-> | --- | --- |
-> | macOS | `brew install tesseract leptonica pkg-config` |
+> | Platform               | One-liner                                                                                            |
+> | ---------------------- | ---------------------------------------------------------------------------------------------------- |
+> | macOS                  | `brew install tesseract leptonica pkg-config`                                                        |
 > | Debian / Ubuntu 24.04+ | `sudo apt-get install -y build-essential pkg-config libtesseract-dev libleptonica-dev tesseract-ocr` |
-> | Fedora / RHEL | `sudo dnf install -y gcc-c++ pkgconf-pkg-config tesseract-devel leptonica-devel` |
-> | Arch | `sudo pacman -S base-devel pkgconf tesseract leptonica` |
-> | Alpine | `apk add build-base pkgconf tesseract-ocr-dev leptonica-dev` |
-> | Windows | Use WSL2 with Ubuntu 24.04 and follow the Debian/Ubuntu row. |
+> | Fedora / RHEL          | `sudo dnf install -y gcc-c++ pkgconf-pkg-config tesseract-devel leptonica-devel`                     |
+> | Arch                   | `sudo pacman -S base-devel pkgconf tesseract leptonica`                                              |
+> | Alpine                 | `apk add build-base pkgconf tesseract-ocr-dev leptonica-dev`                                         |
+> | Windows                | Use WSL2 with Ubuntu 24.04 and follow the Debian/Ubuntu row.                                         |
 >
 > Verify with `tesseract --version` and `pkg-config --modversion tesseract`
 > in your shell before continuing.
@@ -24,9 +24,11 @@
 ```elixir
 Mix.install(
   [
-    {:image_ocr, path: Path.expand("..", __DIR__)},
+    {:image_ocr, "~> 0.1"},
     {:image, "~> 0.66"},
-    {:kino, "~> 0.14"}
+    {:kino, "~> 0.14"},
+    {:nx, "~> 0.10"},
+    {:exla, "~> 0.10"}
   ]
 )
 ```
@@ -49,7 +51,7 @@ easy to render text on a white background that Tesseract can read.
 
 ```elixir
 render_text = fn string ->
-  Image.text!(string,
+  Image.Text.text!(string,
     font_size: 48,
     text_fill_color: :black,
     background_fill_color: :white,
@@ -187,14 +189,13 @@ in-memory binaries, and live `Vix.Vips.Image` values transparently.
 upload = Kino.Input.image("Image to OCR")
 ```
 
-```elixir
+````elixir
 case Kino.Input.read(upload) do
   nil ->
     Kino.Markdown.new("_Upload an image above and re-run this cell._")
 
-  %{file_ref: ref} ->
-    path = Kino.Input.file_path(ref)
-    {:ok, image} = Image.open(path)
+  kino ->
+    {:ok, image} = Image.from_kino(kino)
     {:ok, recognised} = Image.OCR.read_text(ocr, image)
 
     Kino.Layout.grid(
@@ -206,7 +207,7 @@ case Kino.Input.read(upload) do
       columns: 1
     )
 end
-```
+````
 
 ## 8. Tweaking accuracy with PSM and SetVariable
 
