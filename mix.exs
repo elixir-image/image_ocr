@@ -81,6 +81,7 @@ defmodule Image.OCR.MixProject do
     [
       main: "readme",
       logo: "logo.jpg",
+      formatters: ["html", "markdown"],
       extras: [
         "README.md",
         "CHANGELOG.md",
