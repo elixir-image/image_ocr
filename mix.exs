@@ -84,7 +84,7 @@ defmodule Image.OCR.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md",
-        "notebooks/demo.livemd": [title: "Demo Livebook"]
+        "livebooks/demo.livemd": [title: "Demo Livebook"]
       ],
       source_ref: "v#{@version}"
     ]
