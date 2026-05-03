@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Image.OCR.Tessdata.Add do
+defmodule Mix.Tasks.Image.Ocr.Tessdata.Add do
   @shortdoc "Download a Tesseract trained-data file for one or more languages"
 
   @moduledoc """

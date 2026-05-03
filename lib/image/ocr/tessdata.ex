@@ -16,7 +16,7 @@ defmodule Image.OCR.Tessdata do
 
   4. The vendored fallback at `priv/tessdata/` inside the `:image_ocr` package.
 
-  See `Mix.Tasks.Image.OCR.Tessdata.Add` and friends for managing the contents
+  See `Mix.Tasks.Image.Ocr.Tessdata.Add` and friends for managing the contents
   of a configured directory.
 
   """

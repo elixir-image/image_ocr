@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Image.OCR.Tessdata.List do
+defmodule Mix.Tasks.Image.Ocr.Tessdata.List do
   @shortdoc "List installed Tesseract trained-data files"
 
   @moduledoc """

@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Image.OCR.Tessdata.Remove do
+defmodule Mix.Tasks.Image.Ocr.Tessdata.Remove do
   @shortdoc "Remove an installed Tesseract trained-data file"
 
   @moduledoc """

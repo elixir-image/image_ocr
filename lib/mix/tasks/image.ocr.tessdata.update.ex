@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Image.OCR.Tessdata.Update do
+defmodule Mix.Tasks.Image.Ocr.Tessdata.Update do
   @shortdoc "Refresh every installed Tesseract trained-data file"
 
   @moduledoc """

@@ -26,7 +26,7 @@ defmodule Image.OCR do
   ## Trained-data
 
   `Image.OCR` ships with English (`eng`) trained-data. To install additional
-  languages, see `Mix.Tasks.Image.OCR.Tessdata.Add`. The trained-data location
+  languages, see `Mix.Tasks.Image.Ocr.Tessdata.Add`. The trained-data location
   is resolved by `Image.OCR.Tessdata.datapath/1`.
 
   """
