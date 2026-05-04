@@ -1,8 +1,8 @@
 defmodule Image.OCR.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
-  @source_url "https://github.com/kipcole9/image_ocr"
+  @version "0.2.0"
+  @source_url "https://github.com/elixir-image/image_ocr"
 
   def project do
     [
